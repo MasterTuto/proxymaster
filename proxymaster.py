@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup as BS
 import requests
 import json
 import random
+from xml.etree import cElementTree as ET
+import xml.dom.minidom as minidom
 from bs4.element import Tag, NavigableString
 
 '''
@@ -14,6 +16,10 @@ the proxies found by this tool will be used in the another tool of mine:
 
 -- An not yet named anonymous e-mail sender service.
 
+
+
+ADICIONAR FUNÇÃO:
+	-SALVAR EM XML, CSV E TALVEZ XSML
 '''
 
 class UltraProxies:
@@ -159,16 +165,61 @@ class Hidester:
 
 services = [UltraProxies, USProxy, Hidester]
 
+
+def save_as_json(data, number):
+	with open('proxies.json', 'w') as f:
+		json.dump(data, f, indent=4)
+	print('%s foram salvos para "proxies.json".' % number)
+
+
+def save_as_xml(data, number):
+	root = ET.Element("proxies")
+	for proxy in data:
+		proxy_root = ET.SubElement(root, "proxy")
+		for each_proxy in proxy:
+			ET.SubElement(proxy_root, each_proxy).text = proxy[each_proxy]
+	
+	rough_string = ET.tostring(root, 'utf-8')
+	reparsed = minidom.parseString(rough_string)
+	save_it = reparsed.toprettyxml(indent="    ")
+	with open("proxies.xml", 'wb') as filen:
+		filen.write(save_it)
+	print('%s foram salvos para "proxies.xml".' % number)
+
+
+def save_as_csv(data, number):
+	proxies = ["ip,port,protocol,place"]
+	what_to_add = ''
+	for proxy in data:
+		what_to_add += proxy['ip']+','
+		what_to_add += proxy['port']+','
+		what_to_add += proxy['protocol']+','
+		what_to_add += proxy['place']
+		proxies.append(what_to_add)
+		what_to_add = ''
+	
+	with open("proxies.csv", 'wb') as f:
+		f.write('\n'.join(proxies))
+
+	print('%s proxies foram salvos para "proxies.csv"' % number)
+
+
+
+
 def main():
 	opcoes = {
 		'1': [services[0]],
 		'2': [services[1]],
 		'3': [services[2]],
 		'4': services,
-		'5': random.choice([services])
+		'5': [random.choice(services)]
 	}
 
-
+	saving_types = {
+		'1': save_as_json,
+		'2': save_as_xml,
+		'3': save_as_csv
+	}
 	print("""
 [+]==========================================[+]
 |         proxymaster - Proxies Fetcher        |
@@ -193,25 +244,32 @@ def main():
 		exit()
 
 	total_proxies= []
+	quantos = int(input("\nInsira o numero de proxies que quiser (insira 0 para buscar o maximo): "))
+	print("==="*20)
+	print("""\n
+    [1] Salvar como JSon 
+    [2] Salvar como XML
+    [3] Salvar como CSV
+	""")
+	saving_type = str(input("\nInsira o numero correspondente: "))
+	save = saving_types[saving_type]
+	
 	for service in opcoes[escolha]:
 		proxies = service().get_proxies()
 		total_proxies.extend(proxies)
 
 	f_total_proxies = total_proxies
-	quantos = int(input("\nInsira o numero de proxies que quiser (insira 0 para buscar o maximo): "))
-	
+
 	if quantos > 0:
 		f_total_proxies = []
 		for vez in range(quantos):
 			proxy = random.choice(total_proxies)
 			f_total_proxies.append(proxy)
 			total_proxies.remove(proxy)
-	
-	with open('proxies.txt', 'w') as f:
-		json.dump(f_total_proxies, f, indent=4)
 
 	print("==="*20)
-	print("\n%s Proxies foram salvos para 'proxies.txt', em formato json." % len(f_total_proxies))
+	save(f_total_proxies, len(f_total_proxies))
+	#print("\n%s Proxies foram salvos para 'proxies.txt', em formato json." % len(f_total_proxies))
 
 if __name__ == '__main__':
 	main()
